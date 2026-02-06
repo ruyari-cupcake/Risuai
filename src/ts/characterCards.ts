@@ -1037,7 +1037,7 @@ async function importCharacterCardSpec(card:CharacterCardV2Risu|CharacterCardV3,
 
 }
 
-function convertCharbook(arg:{
+export function convertCharbook(arg:{
     lorebook:loreBook[]
     charbook:CharacterBook
     loresettings:loreSettings

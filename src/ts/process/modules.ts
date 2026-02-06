@@ -9,9 +9,9 @@ import { decodeRPack, encodeRPack } from "../rpack/rpack_js"
 import { convertImage } from "../parser.svelte"
 import { HideIconStore, moduleBackgroundEmbedding, ReloadGUIPointer } from "../stores.svelte"
 import {get} from "svelte/store"
-import { CharXWriter } from "./processzip"
+import { CharXImporter, CharXWriter } from "./processzip"
 import type { CharacterCardV3 } from "@risuai/ccardlib"
-import { convertRisuBookToCCv3Lorebook } from "../characterCards"
+import { convertCharbook, convertRisuBookToCCv3Lorebook } from "../characterCards"
 
 export interface MCPModule{
     url: string
@@ -175,6 +175,46 @@ export async function exportAsLegacyModule(module:RisuModule, arg:{
     return apb.buffer
 }
 
+async function importCharXModule(buf:Buffer):Promise<RisuModule> {
+    const importer = new CharXImporter()
+    await importer.parse(buf)
+    const cardData = importer.cardData
+    if(!cardData){
+        alertError(language.errors.noData)
+        return
+    }
+    const card:CharacterCardV3 = JSON.parse(cardData)
+    if(card.spec !== 'chara_card_v3'){
+        alertError(language.errors.noData)
+        return
+    }
+    await importer.done()
+
+    const book = convertCharbook({
+        lorebook: [],
+        charbook: card.data.character_book,
+        loresettings: undefined,
+        loreExt: undefined
+    })
+
+    const module:RisuModule = {
+        name: card.data.name || 'Imported Module',
+        description: card.data.creator_notes || '',
+        lorebook: book.lorebook,
+        regex: card.data.extensions?.risuai?.customScripts || [],
+        trigger: card.data.extensions?.risuai?.triggerScripts || [],
+        id: v4(),
+        lowLevelAccess: card.data.extensions?.risuai?.lowLevelAccess || false,
+        hideIcon: card.data.extensions?.risuai?.hideIcon || false,
+        backgroundEmbedding: card.data.extensions?.risuai?.backgroundEmbedding || '',
+        namespace: card.data.extensions?.risuai?.namespace || '',
+        customModuleToggle: card.data.extensions?.risuai?.customModuleToggle || '',
+        mcp: card.data.extensions?.risuai?.mcp || undefined,
+        assets: []
+    }
+    
+}
+
 export async function readAsLegacyModule(buf:Buffer):Promise<RisuModule> {
     let pos = 0
 
@@ -317,6 +357,18 @@ export async function importModule(){
         try {
             const buf = Buffer.from(fileData)
             const module = await readAsLegacyModule(buf)
+            db.modules.push(module)
+            setDatabase(db)
+            return   
+        } catch (error) {
+            console.error(error)
+            alertError(language.errors.noData)
+        }
+    }
+    else if(f.name.endsWith('.charx')){
+        try {
+            const buf = Buffer.from(fileData)
+            const module = await importCharXModule(buf)
             db.modules.push(module)
             setDatabase(db)
             return   
