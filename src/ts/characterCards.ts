@@ -1493,20 +1493,6 @@ export async function exportCharacterCard(char:character, type:'png'|'json'|'cha
             })
     
             if(type === 'charx' || type === 'charxJpeg'){
-                const md:RisuModule = {
-                    name: `${char.name} Module`,
-                    description: "Module for " + char.name,
-                    id: v4(),
-                    trigger: card.data.extensions.risuai.triggerscript ?? [],
-                    regex: card.data.extensions.risuai.customScripts ?? [],
-                    lorebook: char.globalLore ?? [],
-                }
-                delete card.data.extensions.risuai.triggerscript
-                delete card.data.extensions.risuai.customScripts
-                await writer.write("module.risum", await exportAsLegacyModule(md, {
-                    alertEnd: false,
-                    saveData: false
-                }))
                 await writer.write("card.json", Buffer.from(JSON.stringify(card, null, 4)))
             }
             else{
