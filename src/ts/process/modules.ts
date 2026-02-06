@@ -92,6 +92,12 @@ export async function exportCharXModule(module:RisuModule, arg:{
 
         const baseDir = `assets/other/image/${asset[0]}.webp`
         await writer.write(baseDir, Buffer.from(await convertImage(rData)))
+        card.data.assets.push({
+            uri: `embeded://${baseDir}`,
+            type: 'x-risu-asset',
+            name: asset[0],
+            ext: 'webp'
+        })
     }
 
     await writer.write("card.json", Buffer.from(JSON.stringify(card, null, 4)))    
