@@ -313,7 +313,7 @@ export class SandboxHost {
             return { __type: 'REMOTE_REF', id } as RemoteRef;
         }
 
-        if(val instanceof Response) {
+        if (val instanceof Response) {
             return {
                 __type: 'CALLBACK_STREAMS',
                 __specialType: 'Response',
@@ -326,7 +326,7 @@ export class SandboxHost {
             };
         }
 
-        if(
+        if (
             val instanceof ReadableStream
             || val instanceof WritableStream
             || val instanceof TransformStream
@@ -351,11 +351,17 @@ export class SandboxHost {
                         const reqId = 'cb_req_' + Math.random().toString(36).substring(2);
                         this.pendingCallbacks.set(reqId, { resolve, reject });
 
+                        // AbortSignal cannot be structured-cloned for postMessage,
+                        // so we need to filter it out before sending
+                        const sanitizedArgs = innerArgs.map(arg =>
+                            arg instanceof AbortSignal ? null : arg
+                        );
+
                         const message = {
                             type: 'INVOKE_CALLBACK',
                             id: cbRef.id,
                             reqId,
-                            args: innerArgs
+                            args: sanitizedArgs
                         };
                         const transferables = this.collectTransferables(message);
                         this.iframe.contentWindow?.postMessage(message, '*', transferables);
@@ -373,8 +379,8 @@ export class SandboxHost {
         });
     }
 
-    public run(container: HTMLElement|HTMLIFrameElement, userCode: string) {
-        if(container instanceof HTMLIFrameElement) {
+    public run(container: HTMLElement | HTMLIFrameElement, userCode: string) {
+        if (container instanceof HTMLIFrameElement) {
             this.iframe = container;
         } else {
             this.iframe = document.createElement('iframe');
@@ -445,7 +451,7 @@ export class SandboxHost {
                 console.log("Original request:", data);
                 console.log('Original response:', response, transferables);
                 try {
-                    this.iframe.contentWindow?.postMessage(response, '*', transferables);                    
+                    this.iframe.contentWindow?.postMessage(response, '*', transferables);
                 } catch (error) {
                     this.iframe.contentWindow?.postMessage({
                         type: 'RESPONSE',
